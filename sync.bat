@@ -7,18 +7,10 @@ echo.
 
 git add .
 
-git status --porcelain >nul
-if errorlevel 1 (
+git diff --cached --quiet >nul 2>&1
+if %errorlevel% equ 0 (
     echo ✅ 没有需要提交的更改。
-    pause
-    exit
-)
-
-for /f "tokens=*" %%i in ('git status --porcelain') do set HAS_CHANGES=1
-
-if not defined HAS_CHANGES (
-    echo ✅ 没有需要提交的更改。
-    pause
+    timeout /t 2 >nul
     exit
 )
 
@@ -26,7 +18,7 @@ git commit -m "🤖 自动同步: %date% %time:~0,8%"
 
 if errorlevel 1 (
     echo ❌ 提交失败，请检查。
-    pause
+    timeout /t 3 >nul
     exit
 )
 
@@ -39,4 +31,4 @@ if errorlevel 1 (
     echo ✅ 同步成功！
 )
 
-pause
+timeout /t 2 >nul
