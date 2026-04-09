@@ -1,0 +1,915 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>📚 学习抽卡</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: linear-gradient(145deg, #1e2b3a 0%, #0f172a 100%);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-family: 'Segoe UI', 'PingFang SC', Roboto, system-ui, sans-serif;
+      padding: 20px;
+    }
+
+    .card {
+      max-width: 700px;
+      width: 100%;
+      background: rgba(255, 255, 255, 0.08);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 48px;
+      padding: 28px 24px 32px;
+      box-shadow: 0 25px 40px -10px rgba(0, 0, 0, 0.6), inset 0 1px 2px rgba(255, 255, 255, 0.08);
+    }
+
+    h1 {
+      text-align: center;
+      font-weight: 500;
+      letter-spacing: 2px;
+      font-size: 2.2rem;
+      color: #f0e9e1;
+      text-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+      margin-bottom: 12px;
+    }
+
+    .wheel-wrapper {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 1 / 1;
+      margin: 10px 0 20px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      overflow: hidden;
+      border-radius: 50%;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      box-shadow: 0 0 0 2px rgba(255, 215, 150, 0.2), 0 20px 35px -5px #00000080, inset 0 5px 12px rgba(0,0,0,0.5);
+      background: #2e3b4e;
+      cursor: pointer;
+    }
+
+    .pointer {
+      position: absolute;
+      top: -6px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 0;
+      height: 0;
+      border-left: 22px solid transparent;
+      border-right: 22px solid transparent;
+      border-top: 40px solid #f2c94c;
+      filter: drop-shadow(0 8px 8px rgba(0, 0, 0, 0.4));
+      z-index: 10;
+      pointer-events: none;
+    }
+    .pointer::after {
+      content: "";
+      position: absolute;
+      top: -48px;
+      left: -8px;
+      width: 16px;
+      height: 16px;
+      background: radial-gradient(circle, #ffecb3 0%, #d4a72c 90%);
+      border-radius: 50%;
+      box-shadow: 0 0 0 3px rgba(0,0,0,0.3), inset 0 1px 3px white;
+    }
+
+    .center-dot {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 18px;
+      height: 18px;
+      background: #e9c46a;
+      border-radius: 50%;
+      box-shadow: 0 0 0 5px rgba(20, 30, 45, 0.6), inset 0 2px 5px #fff9e6;
+      z-index: 5;
+      pointer-events: none;
+      border: 2px solid #2e1f0c;
+    }
+
+    /* 加载动画覆盖层 */
+    .loading-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: #1a2636;
+      border-radius: 50%;
+      z-index: 20;
+      display: none;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+    }
+    .loading-overlay.active {
+      display: flex;
+    }
+
+    .loading-scene {
+      width: 100%;
+      height: 100%;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+    }
+
+    /* 新增：猫咪和文字的包裹层，确保它们相对位置不跑偏 */
+    .cat-container {
+      position: relative;
+      width: 75%;
+      max-width: 220px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .cat-svg {
+      width: 100%;
+      height: auto;
+      overflow: visible;
+    }
+
+    /* 猫咪主体跳动动画 */
+    @keyframes catBounce {
+      0%, 100% { transform: translateY(0) scaleY(1); }
+      50% { transform: translateY(-10px) scaleY(1.02); }
+    }
+
+    /* 尾巴摇摆动画 */
+    @keyframes tailWag {
+      0%, 100% { transform: rotate(0deg); }
+      50% { transform: rotate(18deg); }
+    }
+
+    /* 眨眼动画 */
+    @keyframes eyeBlink {
+      0%, 42%, 58%, 100% { transform: scaleY(1); }
+      50% { transform: scaleY(0.1); }
+    }
+
+    /* 底部阴影缩动画 */
+    @keyframes shadowPulse {
+      0%, 100% { transform: scaleX(1); opacity: 0.5; }
+      50% { transform: scaleX(0.78); opacity: 0.25; }
+    }
+
+    /* 喵~ 文字飘动动画 */
+    @keyframes meowFloat {
+      0% { opacity: 0; transform: translate(0, 5px) scale(0.9); }
+      15% { opacity: 1; transform: translate(3px, 0px) scale(1); }
+      70% { opacity: 1; transform: translate(8px, -12px) scale(1); }
+      100% { opacity: 0; transform: translate(12px, -18px) scale(0.95); }
+    }
+
+    .cat-group {
+      animation: catBounce 2s infinite ease-in-out;
+      transform-origin: center 155px;
+    }
+
+    .tail {
+      animation: tailWag 2s infinite ease-in-out;
+      transform-origin: 130px 148px;
+    }
+
+    .eye-blink {
+      animation: eyeBlink 3.5s infinite;
+      transform-origin: center;
+    }
+
+    .cat-shadow {
+      animation: shadowPulse 2s infinite ease-in-out;
+      transform-origin: 100px 175px;
+    }
+
+    .meow-text {
+      position: absolute;
+      /* 调整为相对 cat-container 定位 */
+      top: 38%;
+      right: 5%;
+      font-size: 1rem;
+      font-weight: bold;
+      color: #a7bbce;
+      animation: meowFloat 2.2s infinite ease-in-out;
+      pointer-events: none;
+      letter-spacing: 2px;
+      z-index: 10;
+    }
+
+    .loading-text {
+      margin-top: 12px;
+      font-size: 0.85rem;
+      color: #a7bbce;
+      text-align: center;
+      letter-spacing: 2px;
+    }
+
+    /* 抽卡结果遮罩层 */
+    .overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.85);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+      backdrop-filter: blur(8px);
+      opacity: 0;
+      transition: opacity 0.4s ease;
+    }
+    .overlay.active {
+      display: flex;
+      opacity: 1;
+    }
+
+    .card-reveal {
+      position: relative;
+      width: min(380px, 85vw);
+      padding: 60px 40px 50px;
+      background: linear-gradient(135deg, #1a2a3a 0%, #0d1a2a 100%);
+      border-radius: 32px;
+      text-align: center;
+      box-shadow: 0 0 60px rgba(233, 177, 59, 0.3), 0 30px 60px rgba(0, 0, 0, 0.5);
+      border: 2px solid rgba(233, 177, 59, 0.4);
+      transform: scale(0.3) rotateY(180deg);
+      opacity: 0;
+      transition: all 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+      overflow: hidden;
+    }
+    .overlay.active .card-reveal {
+      transform: scale(1) rotateY(0deg);
+      opacity: 1;
+    }
+
+    .card-reveal::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: conic-gradient(from 0deg, transparent, rgba(233, 177, 59, 0.1), transparent, rgba(233, 177, 59, 0.05), transparent);
+      animation: rotateBg 3s linear infinite;
+    }
+    .card-reveal::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+      animation: shimmer 2s ease-in-out infinite;
+    }
+
+    @keyframes rotateBg { 100% { transform: rotate(360deg); } }
+    @keyframes shimmer { 0%, 100% { left: -100%; } 50% { left: 100%; } }
+
+    .card-label {
+      font-size: 1rem;
+      color: #a7bbce;
+      text-transform: uppercase;
+      letter-spacing: 3px;
+      margin-bottom: 16px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .card-stars {
+      font-size: 1.5rem;
+      color: #f2c94c;
+      margin-bottom: 12px;
+      position: relative;
+      z-index: 1;
+      text-shadow: 0 0 10px rgba(242, 201, 76, 0.5);
+      animation: starPulse 1.5s ease-in-out infinite;
+    }
+    @keyframes starPulse {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.1); opacity: 0.8; }
+    }
+
+    .card-result {
+      font-size: 2.2rem;
+      font-weight: 700;
+      color: #fad98b;
+      text-shadow: 0 0 20px rgba(250, 217, 139, 0.4);
+      margin-bottom: 20px;
+      position: relative;
+      z-index: 1;
+      opacity: 0;
+      transform: translateY(20px);
+      transition: all 0.5s ease-out 0.4s;
+    }
+    .overlay.active .card-result {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .card-subtitle {
+      font-size: 0.9rem;
+      color: #7d95aa;
+      position: relative;
+      z-index: 1;
+      opacity: 0;
+      transform: translateY(10px);
+      transition: all 0.5s ease-out 0.6s;
+    }
+    .overlay.active .card-subtitle {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .card-close {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      width: 32px;
+      height: 32px;
+      border: none;
+      background: rgba(255, 255, 255, 0.1);
+      color: #a7bbce;
+      font-size: 1.2rem;
+      border-radius: 50%;
+      cursor: pointer;
+      z-index: 2;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .card-close:hover { background: rgba(255, 255, 255, 0.2); color: #fff; }
+
+    /* 粒子效果容器 */
+    .particles {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 999;
+      overflow: hidden;
+    }
+    .particle {
+      position: absolute;
+      width: 6px;
+      height: 6px;
+      background: #f2c94c;
+      border-radius: 50%;
+      box-shadow: 0 0 6px rgba(242, 201, 76, 0.8);
+      animation: particleFall linear forwards;
+    }
+    @keyframes particleFall {
+      0% { transform: translateY(-10vh) rotate(0deg); opacity: 1; }
+      100% { transform: translateY(110vh) rotate(720deg); opacity: 0; }
+    }
+
+    .control-panel {
+      background: rgba(10, 20, 30, 0.5);
+      border-radius: 36px;
+      padding: 22px 18px 18px;
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 215, 150, 0.2);
+      margin-top: 8px;
+    }
+
+    .label-header {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      margin-bottom: 8px;
+      color: #e2dcd2;
+    }
+    .label-header label { font-weight: 500; font-size: 1rem; letter-spacing: 0.5px; }
+    .badge {
+      background: #2a3a4a;
+      padding: 4px 14px;
+      border-radius: 30px;
+      font-size: 0.8rem;
+      color: #bdd3e6;
+      border: 1px solid #5f7f9f;
+    }
+
+    textarea {
+      width: 100%;
+      padding: 16px 18px;
+      font-size: 1rem;
+      line-height: 1.5;
+      background: #1e2a36;
+      border: 1px solid #5e7c9c;
+      border-radius: 28px;
+      color: #f2e9de;
+      resize: vertical;
+      min-height: 110px;
+      font-family: inherit;
+      box-shadow: inset 0 4px 10px #00000040, 0 2px 4px rgba(0,0,0,0.2);
+      transition: border 0.15s;
+    }
+    textarea:focus {
+      outline: none;
+      border-color: #f3b33d;
+      box-shadow: inset 0 4px 10px #00000060, 0 0 0 3px rgba(243, 179, 61, 0.3);
+    }
+    textarea::placeholder { color: #9aabbb; font-size: 0.9rem; }
+
+    .hint { font-size: 0.8rem; color: #a7bbce; margin: 8px 0 18px 8px; }
+
+    .action-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    .btn {
+      background: #2e4057;
+      border: none;
+      border-bottom: 3px solid #0f1a24;
+      color: #f2e7d5;
+      padding: 12px 24px;
+      font-size: 1.1rem;
+      font-weight: 600;
+      border-radius: 60px;
+      cursor: pointer;
+      box-shadow: 0 6px 0 #0f1a24, 0 4px 10px black;
+      transition: all 0.08s ease-in;
+      flex: 1 1 140px;
+      letter-spacing: 1px;
+      backdrop-filter: blur(5px);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+    .btn:hover {
+      background: #3f5a74;
+      transform: translateY(-2px);
+      box-shadow: 0 8px 0 #0f1a24, 0 6px 14px black;
+    }
+    .btn:active {
+      transform: translateY(3px);
+      box-shadow: 0 3px 0 #0f1a24, 0 4px 10px black;
+    }
+    .btn:disabled {
+      opacity: 0.5;
+      pointer-events: none;
+      transform: none;
+      box-shadow: 0 4px 0 #0f1a24, 0 2px 6px black;
+      background: #3a4a5e;
+    }
+
+    .spin-btn {
+      background: #d48f2b;
+      border-bottom-color: #7a4f15;
+      color: #0b0f16;
+      text-shadow: 0 1px 2px #ffdd99;
+      font-weight: 700;
+      box-shadow: 0 6px 0 #7a4f15, 0 4px 12px black;
+    }
+    .spin-btn:hover { background: #e7a43e; }
+
+    .result-area {
+      background: #0d1a26c9;
+      border-radius: 40px;
+      padding: 14px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-left: 6px solid #f3b33d;
+      backdrop-filter: blur(4px);
+      margin-top: 12px;
+    }
+    .result-label {
+      color: #b9cdde;
+      font-weight: 400;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      font-size: 0.9rem;
+    }
+    .result-value {
+      font-size: 1.9rem;
+      font-weight: 700;
+      color: #fad98b;
+      text-shadow: 0 2px 8px #00000080;
+      max-width: 70%;
+      text-align: right;
+      word-break: break-word;
+    }
+
+    .footer-note {
+      color: #7d95aa;
+      margin-top: 10px;
+      text-align: center;
+      font-size: 0.8rem;
+    }
+  </style>
+</head>
+<body>
+<div class="card">
+  <h1>📚 学习抽卡</h1>
+
+  <div class="wheel-wrapper">
+    <canvas id="wheelCanvas"></canvas>
+    <div class="pointer"></div>
+    <div class="center-dot"></div>
+
+    <!-- 加载动画 -->
+    <div class="loading-overlay" id="loadingOverlay">
+      <div class="loading-scene">
+        
+        <!-- 新增了包裹层，绑定了文字和猫咪 -->
+        <div class="cat-container">
+          <!-- 漂浮的"喵~"文字 -->
+          <div class="meow-text">喵~</div>
+
+          <!-- 猫咪 SVG 绘图 -->
+          <svg class="cat-svg" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+            <!-- 底部跳动阴影 -->
+            <ellipse class="cat-shadow" cx="100" cy="175" rx="42" ry="7" fill="#0f172a" opacity="0.5" />
+
+            <!-- 猫咪主体编组 -->
+            <g class="cat-group">
+              <!-- 尾巴 -->
+              <path class="tail"
+                    d="M 130 148 C 158 120, 182 152, 148 162 C 138 165, 134 158, 130 148 Z"
+                    fill="#ffffff" stroke="#2e3b4e" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round" />
+
+              <!-- 身体主轮廓 -->
+              <path d="
+                  M 75 158
+                  C 52 158, 48 130, 52 112
+                  C 30 102, 34 64, 66 58
+                  L 76 24
+                  L 90 50
+                  Q 100 44, 110 50
+                  L 124 24
+                  L 134 58
+                  C 166 64, 170 102, 148 112
+                  C 152 130, 148 158, 125 158
+                  Q 100 163, 75 158 Z"
+                  fill="#ffffff" stroke="#2e3b4e" stroke-width="5.5" stroke-linejoin="round" stroke-linecap="round" />
+
+              <!-- 粉色内耳 -->
+              <path d="M 68 54 L 75 33 L 84 50 Z" fill="#ffb3b3" stroke="#2e3b4e" stroke-width="3.5" stroke-linejoin="round" />
+              <path d="M 132 54 L 125 33 L 116 50 Z" fill="#ffb3b3" stroke="#2e3b4e" stroke-width="3.5" stroke-linejoin="round" />
+
+              <!-- 脸颊红晕 -->
+              <ellipse cx="52" cy="100" rx="12" ry="8" fill="#ffb3b3" opacity="0.7" />
+              <ellipse cx="148" cy="100" rx="12" ry="8" fill="#ffb3b3" opacity="0.7" />
+
+              <!-- 脸颊上的小红线 -->
+              <g stroke="#2e3b4e" stroke-width="2.5" stroke-linecap="round" opacity="0.5">
+                <line x1="44" y1="98" x2="56" y2="101" />
+                <line x1="42" y1="104" x2="54" y2="107" />
+                <line x1="144" y1="101" x2="156" y2="98" />
+                <line x1="146" y1="107" x2="158" y2="104" />
+              </g>
+
+              <!-- 睁着的黑色豆豆眼（带眨眼动画） -->
+              <ellipse class="eye-blink" cx="78" cy="96" rx="6.5" ry="11" fill="#2e3b4e" style="transform-origin:78px 96px;" />
+              <ellipse class="eye-blink" cx="122" cy="96" rx="6.5" ry="11" fill="#2e3b4e" style="transform-origin:122px 96px;" />
+
+              <!-- 'W' 形状的小嘴巴 -->
+              <path d="M 90 107 Q 95 116, 100 107 Q 105 116, 110 107"
+                    fill="none" stroke="#2e3b4e" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" />
+
+              <!-- 底部两只小爪子 -->
+              <path d="M 82 143 Q 91 162, 100 143 Q 109 162, 118 143"
+                    fill="none" stroke="#2e3b4e" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round" />
+              <!-- 爪子粉色点缀 -->
+              <path d="M 84 146 Q 91 160, 100 146 Q 109 160, 116 146"
+                    fill="#ffb3b3" opacity="0.25" />
+            </g>
+          </svg>
+        </div>
+
+        <!-- 加载文字 -->
+        <div class="loading-text">正在抽选中...</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="control-panel">
+    <div class="label-header">
+      <label>✏️ 编辑学习项目 (每行一个，或用逗号分隔)</label>
+      <span class="badge" id="itemCountBadge">3 项</span>
+    </div>
+    <textarea id="optionsInput" placeholder="例如:&#10;语文, 数学, 英语&#10;物理&#10;化学">数学真题专题, 专业课一套, 英语单词默写一套</textarea>
+    <div class="hint">💡 支持中英文逗号、换行，自动去空</div>
+
+    <div class="action-row">
+      <button class="btn" id="updateBtn" title="根据输入更新轮盘">🔄 更新轮盘</button>
+      <button class="btn spin-btn" id="spinBtn">🎴 开始抽卡</button>
+    </div>
+
+    <div class="result-area">
+      <span class="result-label">上次抽到</span>
+      <span class="result-value" id="resultDisplay">—</span>
+    </div>
+  </div>
+  <div class="footer-note">✨ 点击抽卡，随机决定学习任务</div>
+</div>
+
+<!-- 抽卡结果遮罩 -->
+<div class="overlay" id="overlay">
+  <div class="card-reveal" id="cardReveal">
+    <button class="card-close" id="cardClose">✕</button>
+    <div class="card-label">🎯 今日学习任务</div>
+    <div class="card-stars">⭐⭐⭐⭐⭐</div>
+    <div class="card-result" id="cardResult"></div>
+    <div class="card-subtitle">加油！你是最棒的！💪</div>
+  </div>
+</div>
+
+<!-- 粒子容器 -->
+<div class="particles" id="particles"></div>
+
+<script>
+  (function(){
+    "use strict";
+
+    const canvas = document.getElementById('wheelCanvas');
+    const ctx = canvas.getContext('2d');
+    const optionsInput = document.getElementById('optionsInput');
+    const updateBtn = document.getElementById('updateBtn');
+    const spinBtn = document.getElementById('spinBtn');
+    const resultDisplay = document.getElementById('resultDisplay');
+    const itemCountBadge = document.getElementById('itemCountBadge');
+    const overlay = document.getElementById('overlay');
+    const cardResult = document.getElementById('cardResult');
+    const cardClose = document.getElementById('cardClose');
+    const particlesContainer = document.getElementById('particles');
+    const loadingOverlay = document.getElementById('loadingOverlay');
+
+    let labels = [];
+    let colors = [];
+    let rotation = 0.0;
+    let isAnimating = false;
+
+    const PI = Math.PI;
+    const TAU = 2 * PI;
+
+    function parseLabelsFromInput(inputText) {
+      const normalized = inputText.replace(/[，、\s]+/g, ',');
+      let parts = normalized.split(',').map(s => s.trim()).filter(s => s !== '');
+      if (parts.length === 0) parts = ['语文', '数学'];
+      if (parts.length < 2) parts.push('自习');
+      return parts;
+    }
+
+    function generateColors(count) {
+      const newColors = [];
+      for (let i = 0; i < count; i++) {
+        const hue = (i * 360 / count) % 360;
+        const sat = 65 + Math.floor(Math.random() * 25);
+        const light = 55 + Math.floor(Math.random() * 20);
+        newColors.push(`hsl(${hue}, ${sat}%, ${light}%)`);
+      }
+      return newColors;
+    }
+
+    function updateWheelFromInput() {
+      isAnimating = false;
+      spinBtn.disabled = false;
+      updateBtn.disabled = false;
+      loadingOverlay.classList.remove('active');
+      canvas.style.pointerEvents = '';
+
+      const rawText = optionsInput.value;
+      const newLabels = parseLabelsFromInput(rawText);
+
+      labels = newLabels;
+      colors = generateColors(labels.length);
+      rotation = 0.0;
+
+      itemCountBadge.textContent = `${labels.length} 项`;
+      drawWheel();
+      resultDisplay.textContent = '—';
+    }
+
+    function drawWheel() {
+      const count = labels.length;
+      if (count === 0) return;
+
+      const dpr = window.devicePixelRatio || 1;
+      const rect = canvas.getBoundingClientRect();
+      const realW = Math.round(rect.width * dpr);
+      const realH = Math.round(rect.height * dpr);
+      if (canvas.width !== realW || canvas.height !== realH) {
+        canvas.width = realW;
+        canvas.height = realH;
+      }
+
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      const w = rect.width;
+      const h = rect.height;
+      const centerX = w / 2;
+      const centerY = h / 2;
+      const radius = Math.min(w, h) * 0.44;
+
+      ctx.clearRect(0, 0, w, h);
+      const angleStep = TAU / count;
+
+      for (let i = 0; i < count; i++) {
+        const start = rotation + i * angleStep;
+        const end = start + angleStep;
+
+        ctx.beginPath();
+        ctx.moveTo(centerX, centerY);
+        ctx.arc(centerX, centerY, radius, start, end);
+        ctx.closePath();
+        ctx.fillStyle = colors[i];
+        ctx.fill();
+
+        ctx.strokeStyle = '#f0e6d2';
+        ctx.lineWidth = 2.2;
+        ctx.beginPath();
+        ctx.moveTo(centerX, centerY);
+        ctx.arc(centerX, centerY, radius, start, end);
+        ctx.lineTo(centerX, centerY);
+        ctx.stroke();
+
+        const midAngle = start + angleStep / 2;
+        const textRadius = radius * 0.68;
+        const x = centerX + Math.cos(midAngle) * textRadius;
+        const y = centerY + Math.sin(midAngle) * textRadius;
+
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+
+        // 适当增大基础字号，因为楷体/行楷视觉上会显小
+        let fontSize = Math.min(26, Math.max(16, Math.floor(radius * 0.18)));
+        const text = labels[i];
+        if (text.length > 6) fontSize = Math.max(14, fontSize - 2);
+        if (text.length > 10) fontSize = Math.max(12, fontSize - 4);
+
+        // 使用行楷/楷体等飘逸的字体，去掉会导致重影的描边 strokeText
+        ctx.font = `bold ${fontSize}px 'STXingkai', 'STKaiti', 'KaiTi', '楷体', cursive, serif`;
+        ctx.fillStyle = '#1a1a1a'; // 使用深色填充使其清晰
+        ctx.fillText(text, 0, 0);
+        ctx.restore();
+      }
+
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, radius, 0, TAU);
+      ctx.lineWidth = 4;
+      ctx.strokeStyle = '#d4b17c';
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, radius * 0.12, 0, TAU);
+      ctx.fillStyle = '#1e2f3f';
+      ctx.shadowColor = '#00000060';
+      ctx.shadowBlur = 14;
+      ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.strokeStyle = '#e9c46a';
+      ctx.lineWidth = 5;
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, radius * 0.06, 0, TAU);
+      ctx.fillStyle = '#e7b553';
+      ctx.shadowBlur = 10;
+      ctx.shadowColor = '#ffd58c';
+      ctx.fill();
+      ctx.shadowBlur = 0;
+    }
+
+    function createParticles() {
+      particlesContainer.innerHTML = '';
+      const cols = ['#f2c94c', '#e9b13b', '#fad98b', '#ffecb3', '#d4a72c', '#fff', '#ffe066'];
+      for (let i = 0; i < 50; i++) {
+        const p = document.createElement('div');
+        p.className = 'particle';
+        p.style.left = Math.random() * 100 + '%';
+        p.style.width = (Math.random() * 8 + 3) + 'px';
+        p.style.height = p.style.width;
+        p.style.background = cols[Math.floor(Math.random() * cols.length)];
+        p.style.boxShadow = `0 0 6px ${p.style.background}`;
+        p.style.animationDuration = (Math.random() * 2 + 1.5) + 's';
+        p.style.animationDelay = Math.random() * 0.5 + 's';
+        particlesContainer.appendChild(p);
+      }
+    }
+
+    function clearParticles() {
+      setTimeout(() => { particlesContainer.innerHTML = ''; }, 3000);
+    }
+
+    function showCardAnimation(winnerText) {
+      cardResult.textContent = winnerText;
+      overlay.classList.add('active');
+      createParticles();
+    }
+
+    function hideCardAnimation() {
+      overlay.classList.remove('active');
+      clearParticles();
+    }
+
+    function startDraw() {
+      if (isAnimating) return;
+      const count = labels.length;
+      if (count < 2) { alert('至少需要两个学习项目才能抽选'); return; }
+
+      isAnimating = true;
+      spinBtn.disabled = true;
+      updateBtn.disabled = true;
+      canvas.style.pointerEvents = 'none';
+
+      const targetIndex = Math.floor(Math.random() * count);
+      const winner = labels[targetIndex];
+
+      // 显示加载动画
+      loadingOverlay.classList.add('active');
+
+      // 加载2秒后显示结果
+      setTimeout(() => {
+        loadingOverlay.classList.remove('active');
+        
+        setTimeout(() => {
+          showCardAnimation(winner);
+          resultDisplay.textContent = winner;
+          canvas.style.pointerEvents = '';
+          isAnimating = false;
+          spinBtn.disabled = false;
+          updateBtn.disabled = false;
+        }, 300);
+      }, 2000);
+    }
+
+    function initialSetup() {
+      const defaultText = optionsInput.value;
+      labels = parseLabelsFromInput(defaultText);
+      colors = generateColors(labels.length);
+      rotation = 0.0;
+      itemCountBadge.textContent = `${labels.length} 项`;
+      drawWheel();
+      resultDisplay.textContent = '—';
+
+      updateBtn.addEventListener('click', () => {
+        if (isAnimating) return;
+        updateWheelFromInput();
+        resultDisplay.textContent = '—';
+      });
+
+      spinBtn.addEventListener('click', () => {
+        if (isAnimating) return;
+        if (labels.length < 2) { alert('请至少设置两个学习项目'); return; }
+        startDraw();
+      });
+
+      canvas.addEventListener('click', () => {
+        if (isAnimating) return;
+        if (labels.length >= 2) { startDraw(); }
+        else { alert('学习项目不足，请添加'); }
+      });
+
+      cardClose.addEventListener('click', hideCardAnimation);
+      overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) hideCardAnimation();
+      });
+
+      optionsInput.addEventListener('keydown', (e) => {
+        if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+          e.preventDefault();
+          if (!isAnimating) {
+            updateWheelFromInput();
+            resultDisplay.textContent = '—';
+          }
+        }
+      });
+    }
+
+    initialSetup();
+    window.addEventListener('resize', () => { drawWheel(); });
+  })();
+</script>
+</body>
+</html>
