@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>📚 学习抽卡</title>
+  <title>🔮 技能扭蛋机</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -49,6 +49,8 @@
       align-items: center;
       overflow: hidden;
       border-radius: 50%;
+      /* 给整个轮盘外围加一圈厚重的深色外壳阴影 */
+      box-shadow: 0 0 0 10px #1a2533, 0 20px 40px rgba(0,0,0,0.8);
     }
 
     canvas {
@@ -56,66 +58,63 @@
       width: 100%;
       height: 100%;
       border-radius: 50%;
-      box-shadow: 0 0 0 2px rgba(255, 215, 150, 0.2), 0 20px 35px -5px #00000080, inset 0 5px 12px rgba(0,0,0,0.5);
-      background: #2e3b4e;
+      background: #0f172a;
       cursor: pointer;
     }
 
+    /* 优化后的 3D 质感指针 */
     .pointer {
       position: absolute;
-      top: -6px;
+      top: -10px;
       left: 50%;
       transform: translateX(-50%);
       width: 0;
       height: 0;
-      border-left: 22px solid transparent;
-      border-right: 22px solid transparent;
-      border-top: 40px solid #f2c94c;
-      filter: drop-shadow(0 8px 8px rgba(0, 0, 0, 0.4));
+      border-left: 20px solid transparent;
+      border-right: 20px solid transparent;
+      border-top: 45px solid #f39c12;
+      filter: drop-shadow(0 6px 6px rgba(0, 0, 0, 0.6));
       z-index: 10;
       pointer-events: none;
+    }
+    .pointer::before {
+      content: "";
+      position: absolute;
+      top: -45px;
+      left: -20px;
+      border-left: 20px solid transparent;
+      border-right: 20px solid transparent;
+      border-top: 45px solid rgba(255, 255, 255, 0.25);
     }
     .pointer::after {
       content: "";
       position: absolute;
-      top: -48px;
-      left: -8px;
-      width: 16px;
-      height: 16px;
-      background: radial-gradient(circle, #ffecb3 0%, #d4a72c 90%);
+      top: -55px;
+      left: -12px;
+      width: 24px;
+      height: 24px;
+      background: radial-gradient(circle at 30% 30%, #ffeaa7 0%, #d4a72c 70%, #9e7b1a 100%);
       border-radius: 50%;
-      box-shadow: 0 0 0 3px rgba(0,0,0,0.3), inset 0 1px 3px white;
+      box-shadow: 0 0 0 3px #1a2533, inset 0 2px 4px rgba(255,255,255,0.6);
     }
 
-    .center-dot {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      width: 18px;
-      height: 18px;
-      background: #e9c46a;
-      border-radius: 50%;
-      box-shadow: 0 0 0 5px rgba(20, 30, 45, 0.6), inset 0 2px 5px #fff9e6;
-      z-index: 5;
-      pointer-events: none;
-      border: 2px solid #2e1f0c;
-    }
-
-    /* 加载动画覆盖层 */
+    /* 半透明磨砂遮罩，让背后的轮盘旋转若隐若现 */
     .loading-overlay {
       position: absolute;
       top: 0;
       left: 0;
       width: 100%;
       height: 100%;
-      background: #1a2636;
+      background: rgba(15, 23, 42, 0.65); /* 降低透明度 */
+      backdrop-filter: blur(4px); /* 增加毛玻璃效果 */
+      -webkit-backdrop-filter: blur(4px);
       border-radius: 50%;
       z-index: 20;
       display: none;
       justify-content: center;
       align-items: center;
       flex-direction: column;
+      transition: opacity 0.3s ease;
     }
     .loading-overlay.active {
       display: flex;
@@ -129,9 +128,10 @@
       flex-direction: column;
       justify-content: center;
       align-items: center;
+      /* 给加载场景加上一点发光，使其在暗背景下突出 */
+      filter: drop-shadow(0 0 20px rgba(0,0,0,0.5));
     }
 
-    /* 新增：猫咪和文字的包裹层，确保它们相对位置不跑偏 */
     .cat-container {
       position: relative;
       width: 75%;
@@ -147,31 +147,22 @@
       overflow: visible;
     }
 
-    /* 猫咪主体跳动动画 */
     @keyframes catBounce {
       0%, 100% { transform: translateY(0) scaleY(1); }
       50% { transform: translateY(-10px) scaleY(1.02); }
     }
-
-    /* 尾巴摇摆动画 */
     @keyframes tailWag {
       0%, 100% { transform: rotate(0deg); }
       50% { transform: rotate(18deg); }
     }
-
-    /* 眨眼动画 */
     @keyframes eyeBlink {
       0%, 42%, 58%, 100% { transform: scaleY(1); }
       50% { transform: scaleY(0.1); }
     }
-
-    /* 底部阴影缩动画 */
     @keyframes shadowPulse {
-      0%, 100% { transform: scaleX(1); opacity: 0.5; }
-      50% { transform: scaleX(0.78); opacity: 0.25; }
+      0%, 100% { transform: scaleX(1); opacity: 0.6; }
+      50% { transform: scaleX(0.78); opacity: 0.3; }
     }
-
-    /* 喵~ 文字飘动动画 */
     @keyframes meowFloat {
       0% { opacity: 0; transform: translate(0, 5px) scale(0.9); }
       15% { opacity: 1; transform: translate(3px, 0px) scale(1); }
@@ -183,30 +174,26 @@
       animation: catBounce 2s infinite ease-in-out;
       transform-origin: center 155px;
     }
-
     .tail {
       animation: tailWag 2s infinite ease-in-out;
       transform-origin: 130px 148px;
     }
-
     .eye-blink {
       animation: eyeBlink 3.5s infinite;
       transform-origin: center;
     }
-
     .cat-shadow {
       animation: shadowPulse 2s infinite ease-in-out;
       transform-origin: 100px 175px;
     }
-
     .meow-text {
       position: absolute;
-      /* 调整为相对 cat-container 定位 */
       top: 38%;
       right: 5%;
-      font-size: 1rem;
+      font-size: 1.1rem;
       font-weight: bold;
-      color: #a7bbce;
+      color: #e2e8f0;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.8);
       animation: meowFloat 2.2s infinite ease-in-out;
       pointer-events: none;
       letter-spacing: 2px;
@@ -215,10 +202,11 @@
 
     .loading-text {
       margin-top: 12px;
-      font-size: 0.85rem;
-      color: #a7bbce;
+      font-size: 0.9rem;
+      color: #e2e8f0;
       text-align: center;
-      letter-spacing: 2px;
+      letter-spacing: 3px;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.8);
     }
 
     /* 抽卡结果遮罩层 */
@@ -327,13 +315,14 @@
     }
 
     .card-subtitle {
-      font-size: 0.9rem;
-      color: #7d95aa;
+      font-size: 0.95rem;
+      color: #b9cdde;
       position: relative;
       z-index: 1;
       opacity: 0;
       transform: translateY(10px);
       transition: all 0.5s ease-out 0.6s;
+      line-height: 1.4;
     }
     .overlay.active .card-subtitle {
       opacity: 1;
@@ -482,17 +471,17 @@
     }
 
     .spin-btn {
-      background: #d48f2b;
+      background: linear-gradient(180deg, #f5b041 0%, #d48f2b 100%);
       border-bottom-color: #7a4f15;
       color: #0b0f16;
       text-shadow: 0 1px 2px #ffdd99;
       font-weight: 700;
-      box-shadow: 0 6px 0 #7a4f15, 0 4px 12px black;
+      box-shadow: 0 6px 0 #7a4f15, 0 4px 12px rgba(0,0,0,0.6);
     }
-    .spin-btn:hover { background: #e7a43e; }
+    .spin-btn:hover { background: linear-gradient(180deg, #f8c471 0%, #e7a43e 100%); }
 
     .result-area {
-      background: #0d1a26c9;
+      background: rgba(13, 26, 38, 0.8);
       border-radius: 40px;
       padding: 14px 20px;
       display: flex;
@@ -510,10 +499,10 @@
       font-size: 0.9rem;
     }
     .result-value {
-      font-size: 1.9rem;
+      font-size: 1.8rem;
       font-weight: 700;
       color: #fad98b;
-      text-shadow: 0 2px 8px #00000080;
+      text-shadow: 0 2px 8px rgba(0,0,0,0.8);
       max-width: 70%;
       text-align: right;
       word-break: break-word;
@@ -529,92 +518,48 @@
 </head>
 <body>
 <div class="card">
-  <h1>📚 学习抽卡</h1>
+  <h1>🔮 技能扭蛋机</h1>
 
   <div class="wheel-wrapper">
     <canvas id="wheelCanvas"></canvas>
     <div class="pointer"></div>
-    <div class="center-dot"></div>
 
     <!-- 加载动画 -->
     <div class="loading-overlay" id="loadingOverlay">
       <div class="loading-scene">
-        
-        <!-- 新增了包裹层，绑定了文字和猫咪 -->
         <div class="cat-container">
-          <!-- 漂浮的"喵~"文字 -->
           <div class="meow-text">喵~</div>
-
-          <!-- 猫咪 SVG 绘图 -->
           <svg class="cat-svg" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
-            <!-- 底部跳动阴影 -->
-            <ellipse class="cat-shadow" cx="100" cy="175" rx="42" ry="7" fill="#0f172a" opacity="0.5" />
-
-            <!-- 猫咪主体编组 -->
+            <ellipse class="cat-shadow" cx="100" cy="175" rx="42" ry="7" fill="#000" opacity="0.6" />
             <g class="cat-group">
-              <!-- 尾巴 -->
-              <path class="tail"
-                    d="M 130 148 C 158 120, 182 152, 148 162 C 138 165, 134 158, 130 148 Z"
-                    fill="#ffffff" stroke="#2e3b4e" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round" />
-
-              <!-- 身体主轮廓 -->
-              <path d="
-                  M 75 158
-                  C 52 158, 48 130, 52 112
-                  C 30 102, 34 64, 66 58
-                  L 76 24
-                  L 90 50
-                  Q 100 44, 110 50
-                  L 124 24
-                  L 134 58
-                  C 166 64, 170 102, 148 112
-                  C 152 130, 148 158, 125 158
-                  Q 100 163, 75 158 Z"
-                  fill="#ffffff" stroke="#2e3b4e" stroke-width="5.5" stroke-linejoin="round" stroke-linecap="round" />
-
-              <!-- 粉色内耳 -->
-              <path d="M 68 54 L 75 33 L 84 50 Z" fill="#ffb3b3" stroke="#2e3b4e" stroke-width="3.5" stroke-linejoin="round" />
-              <path d="M 132 54 L 125 33 L 116 50 Z" fill="#ffb3b3" stroke="#2e3b4e" stroke-width="3.5" stroke-linejoin="round" />
-
-              <!-- 脸颊红晕 -->
+              <path class="tail" d="M 130 148 C 158 120, 182 152, 148 162 C 138 165, 134 158, 130 148 Z" fill="#ffffff" stroke="#1a2533" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round" />
+              <path d="M 75 158 C 52 158, 48 130, 52 112 C 30 102, 34 64, 66 58 L 76 24 L 90 50 Q 100 44, 110 50 L 124 24 L 134 58 C 166 64, 170 102, 148 112 C 152 130, 148 158, 125 158 Q 100 163, 75 158 Z" fill="#ffffff" stroke="#1a2533" stroke-width="5.5" stroke-linejoin="round" stroke-linecap="round" />
+              <path d="M 68 54 L 75 33 L 84 50 Z" fill="#ffb3b3" stroke="#1a2533" stroke-width="3.5" stroke-linejoin="round" />
+              <path d="M 132 54 L 125 33 L 116 50 Z" fill="#ffb3b3" stroke="#1a2533" stroke-width="3.5" stroke-linejoin="round" />
               <ellipse cx="52" cy="100" rx="12" ry="8" fill="#ffb3b3" opacity="0.7" />
               <ellipse cx="148" cy="100" rx="12" ry="8" fill="#ffb3b3" opacity="0.7" />
-
-              <!-- 脸颊上的小红线 -->
-              <g stroke="#2e3b4e" stroke-width="2.5" stroke-linecap="round" opacity="0.5">
+              <g stroke="#1a2533" stroke-width="2.5" stroke-linecap="round" opacity="0.5">
                 <line x1="44" y1="98" x2="56" y2="101" />
                 <line x1="42" y1="104" x2="54" y2="107" />
                 <line x1="144" y1="101" x2="156" y2="98" />
                 <line x1="146" y1="107" x2="158" y2="104" />
               </g>
-
-              <!-- 睁着的黑色豆豆眼（带眨眼动画） -->
-              <ellipse class="eye-blink" cx="78" cy="96" rx="6.5" ry="11" fill="#2e3b4e" style="transform-origin:78px 96px;" />
-              <ellipse class="eye-blink" cx="122" cy="96" rx="6.5" ry="11" fill="#2e3b4e" style="transform-origin:122px 96px;" />
-
-              <!-- 'W' 形状的小嘴巴 -->
-              <path d="M 90 107 Q 95 116, 100 107 Q 105 116, 110 107"
-                    fill="none" stroke="#2e3b4e" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" />
-
-              <!-- 底部两只小爪子 -->
-              <path d="M 82 143 Q 91 162, 100 143 Q 109 162, 118 143"
-                    fill="none" stroke="#2e3b4e" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round" />
-              <!-- 爪子粉色点缀 -->
-              <path d="M 84 146 Q 91 160, 100 146 Q 109 160, 116 146"
-                    fill="#ffb3b3" opacity="0.25" />
+              <ellipse class="eye-blink" cx="78" cy="96" rx="6.5" ry="11" fill="#1a2533" style="transform-origin:78px 96px;" />
+              <ellipse class="eye-blink" cx="122" cy="96" rx="6.5" ry="11" fill="#1a2533" style="transform-origin:122px 96px;" />
+              <path d="M 90 107 Q 95 116, 100 107 Q 105 116, 110 107" fill="none" stroke="#1a2533" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" />
+              <path d="M 82 143 Q 91 162, 100 143 Q 109 162, 118 143" fill="none" stroke="#1a2533" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round" />
+              <path d="M 84 146 Q 91 160, 100 146 Q 109 160, 116 146" fill="#ffb3b3" opacity="0.25" />
             </g>
           </svg>
         </div>
-
-        <!-- 加载文字 -->
-        <div class="loading-text">正在抽选中...</div>
+        <div class="loading-text">正在为您抽取...</div>
       </div>
     </div>
   </div>
 
   <div class="control-panel">
     <div class="label-header">
-      <label>✏️ 编辑学习项目 (每行一个，或用逗号分隔)</label>
+      <label>✏️ 编辑扭蛋奖池 (每行一个，或用逗号分隔)</label>
       <span class="badge" id="itemCountBadge">3 项</span>
     </div>
     <textarea id="optionsInput" placeholder="例如:&#10;语文, 数学, 英语&#10;物理&#10;化学">数学真题专题, 专业课一套, 英语单词默写一套</textarea>
@@ -622,7 +567,7 @@
 
     <div class="action-row">
       <button class="btn" id="updateBtn" title="根据输入更新轮盘">🔄 更新轮盘</button>
-      <button class="btn spin-btn" id="spinBtn">🎴 开始抽卡</button>
+      <button class="btn spin-btn" id="spinBtn">🎴 开始扭蛋</button>
     </div>
 
     <div class="result-area">
@@ -630,17 +575,17 @@
       <span class="result-value" id="resultDisplay">—</span>
     </div>
   </div>
-  <div class="footer-note">✨ 点击抽卡，随机决定学习任务</div>
+  <div class="footer-note">✨ 点击扭蛋，随机获取今日专属加成</div>
 </div>
 
 <!-- 抽卡结果遮罩 -->
 <div class="overlay" id="overlay">
   <div class="card-reveal" id="cardReveal">
     <button class="card-close" id="cardClose">✕</button>
-    <div class="card-label">🎯 今日学习任务</div>
+    <div class="card-label">🎁 今日专属掉落</div>
     <div class="card-stars">⭐⭐⭐⭐⭐</div>
     <div class="card-result" id="cardResult"></div>
-    <div class="card-subtitle">加油！你是最棒的！💪</div>
+    <div class="card-subtitle" id="cardSubtitle">加油！你是最棒的！💪</div>
   </div>
 </div>
 
@@ -660,14 +605,44 @@
     const itemCountBadge = document.getElementById('itemCountBadge');
     const overlay = document.getElementById('overlay');
     const cardResult = document.getElementById('cardResult');
+    const cardSubtitle = document.getElementById('cardSubtitle');
     const cardClose = document.getElementById('cardClose');
     const particlesContainer = document.getElementById('particles');
     const loadingOverlay = document.getElementById('loadingOverlay');
+
+    const encouragementQuotes = [
+      "再坚持一下，你可以的。", "今天的努力，是明天的底气。", "慢慢来，比较快。",
+      "专注当下，不问结果。", "你已经很棒了，继续向前。", "休息一下，是为了更好地出发。",
+      "每一个小进步，都值得开心。", "相信自己，你比想象中更强大。", "学一点，就多懂一点。",
+      "不怕慢，就怕站。", "积跬步，至千里。", "静下心，沉住气。",
+      "难题怕“认真”二字。", "完成比完美更重要。", "先做五分钟，再说。",
+      "你的潜力，藏在每天的坚持里。", "累了就歇歇，但别放弃。", "一步一个脚印，路会越来越宽。",
+      "别急，最好的总在不经意间出现。", "你只管努力，剩下的交给时间。", "今天也是闪闪发光的一天。",
+      "深呼吸，然后继续。", "没有白走的路，每一步都算数。"
+    ];
+
+    // 高级电竞/游戏风渐变色板
+    const premiumPalettes = [
+      ['#FF512F', '#DD2476'], // 绯红
+      ['#4776E6', '#8E54E9'], // 幻紫
+      ['#00B4DB', '#0083B0'], // 幽蓝
+      ['#F09819', '#EDDE5D'], // 灿金
+      ['#11998e', '#38ef7d'], // 翠绿
+      ['#DA4453', '#89216B'], // 暗玫
+      ['#8E2DE2', '#4A00E0'], // 深靛
+      ['#FF416C', '#FF4B2B'], // 炽橘
+    ];
 
     let labels = [];
     let colors = [];
     let rotation = 0.0;
     let isAnimating = false;
+    
+    // 动画控制变量
+    let spinStartTime = null;
+    let startRotation = 0;
+    let targetRotation = 0;
+    const SPIN_DURATION = 2500; // 旋转总时长(毫秒)
 
     const PI = Math.PI;
     const TAU = 2 * PI;
@@ -683,25 +658,18 @@
     function generateColors(count) {
       const newColors = [];
       for (let i = 0; i < count; i++) {
-        const hue = (i * 360 / count) % 360;
-        const sat = 65 + Math.floor(Math.random() * 25);
-        const light = 55 + Math.floor(Math.random() * 20);
-        newColors.push(`hsl(${hue}, ${sat}%, ${light}%)`);
+        newColors.push(premiumPalettes[i % premiumPalettes.length]);
       }
       return newColors;
     }
 
     function updateWheelFromInput() {
-      isAnimating = false;
-      spinBtn.disabled = false;
-      updateBtn.disabled = false;
+      if (isAnimating) return;
       loadingOverlay.classList.remove('active');
       canvas.style.pointerEvents = '';
 
       const rawText = optionsInput.value;
-      const newLabels = parseLabelsFromInput(rawText);
-
-      labels = newLabels;
+      labels = parseLabelsFromInput(rawText);
       colors = generateColors(labels.length);
       rotation = 0.0;
 
@@ -728,11 +696,13 @@
       const h = rect.height;
       const centerX = w / 2;
       const centerY = h / 2;
-      const radius = Math.min(w, h) * 0.44;
+      // 缩小一点半径，留出空间画华丽的外边框
+      const radius = Math.min(w, h) * 0.42; 
 
       ctx.clearRect(0, 0, w, h);
       const angleStep = TAU / count;
 
+      // 1. 绘制扇区背景 (带渐变和阴影)
       for (let i = 0; i < count; i++) {
         const start = rotation + i * angleStep;
         const end = start + angleStep;
@@ -741,64 +711,156 @@
         ctx.moveTo(centerX, centerY);
         ctx.arc(centerX, centerY, radius, start, end);
         ctx.closePath();
-        ctx.fillStyle = colors[i];
+        
+        // 使用径向渐变营造 3D 凹陷质感
+        const grad = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, radius);
+        grad.addColorStop(0.2, colors[i][0]);
+        grad.addColorStop(1, colors[i][1]);
+        ctx.fillStyle = grad;
         ctx.fill();
 
-        ctx.strokeStyle = '#f0e6d2';
-        ctx.lineWidth = 2.2;
+        // 扇区之间的华丽分割线
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+        ctx.lineWidth = 2;
         ctx.beginPath();
         ctx.moveTo(centerX, centerY);
-        ctx.arc(centerX, centerY, radius, start, end);
-        ctx.lineTo(centerX, centerY);
+        ctx.lineTo(centerX + Math.cos(start) * radius, centerY + Math.sin(start) * radius);
         ctx.stroke();
+      }
 
+      // 2. 绘制整个轮盘的内发光阴影层，增加深度
+      const innerShadow = ctx.createRadialGradient(centerX, centerY, radius - 25, centerX, centerY, radius);
+      innerShadow.addColorStop(0, 'rgba(0,0,0,0)');
+      innerShadow.addColorStop(1, 'rgba(0,0,0,0.5)');
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, radius, 0, TAU);
+      ctx.fillStyle = innerShadow;
+      ctx.fill();
+
+      // 3. 绘制清晰的文字，防止超出轮盘
+      for (let i = 0; i < count; i++) {
+        const start = rotation + i * angleStep;
         const midAngle = start + angleStep / 2;
-        const textRadius = radius * 0.68;
+        
+        // 将锚点设在靠近边缘的位置 (0.82倍半径)
+        const textRadius = radius * 0.82;
         const x = centerX + Math.cos(midAngle) * textRadius;
         const y = centerY + Math.sin(midAngle) * textRadius;
 
         ctx.save();
         ctx.translate(x, y);
-        ctx.textAlign = 'center';
+        
+        // 判断是否需要翻转文字以保证可读性
+        const isFlipped = midAngle > PI / 2 && midAngle < 3 * PI / 2;
+        if (isFlipped) {
+          ctx.rotate(midAngle + PI);
+          ctx.textAlign = 'left'; // 翻转后排版方向向中心延伸
+        } else {
+          ctx.rotate(midAngle);
+          ctx.textAlign = 'right'; // 正常时排版方向向中心延伸
+        }
+        
         ctx.textBaseline = 'middle';
 
-        // 适当增大基础字号，因为楷体/行楷视觉上会显小
-        let fontSize = Math.min(26, Math.max(16, Math.floor(radius * 0.18)));
+        let fontSize = Math.min(26, Math.max(16, Math.floor(radius * 0.16)));
         const text = labels[i];
         if (text.length > 6) fontSize = Math.max(14, fontSize - 2);
         if (text.length > 10) fontSize = Math.max(12, fontSize - 4);
 
-        // 使用行楷/楷体等飘逸的字体，去掉会导致重影的描边 strokeText
         ctx.font = `bold ${fontSize}px 'STXingkai', 'STKaiti', 'KaiTi', '楷体', cursive, serif`;
-        ctx.fillStyle = '#1a1a1a'; // 使用深色填充使其清晰
-        ctx.fillText(text, 0, 0);
+        
+        // 黑色文字，带有微弱的浅色光晕以适应渐变底色
+        ctx.shadowColor = 'rgba(255, 255, 255, 0.4)';
+        ctx.shadowBlur = 3;
+        ctx.shadowOffsetX = 0;
+        ctx.shadowOffsetY = 1;
+        
+        ctx.fillStyle = '#111827'; // 质感深黑色文字
+        
+        // 设置最大宽度限制，防止文字越过中心点或者超出轮盘
+        const maxTextWidth = radius * 0.65;
+        ctx.fillText(text, 0, 0, maxTextWidth);
+        
         ctx.restore();
       }
 
+      // 4. 绘制华丽的金属质感外轮廓
       ctx.beginPath();
       ctx.arc(centerX, centerY, radius, 0, TAU);
-      ctx.lineWidth = 4;
-      ctx.strokeStyle = '#d4b17c';
+      ctx.lineWidth = 12;
+      const rimGrad = ctx.createLinearGradient(0, 0, w, h);
+      rimGrad.addColorStop(0, '#f1c40f');
+      rimGrad.addColorStop(0.5, '#e67e22');
+      rimGrad.addColorStop(1, '#f39c12');
+      ctx.strokeStyle = rimGrad;
+      ctx.stroke();
+      
+      // 外轮廓高光线
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, radius - 5, 0, TAU);
+      ctx.lineWidth = 1;
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
       ctx.stroke();
 
+      // 5. 绘制中心枢纽宝石
       ctx.beginPath();
-      ctx.arc(centerX, centerY, radius * 0.12, 0, TAU);
-      ctx.fillStyle = '#1e2f3f';
-      ctx.shadowColor = '#00000060';
-      ctx.shadowBlur = 14;
+      ctx.arc(centerX, centerY, radius * 0.14, 0, TAU);
+      ctx.fillStyle = '#1a2533';
+      ctx.shadowColor = 'rgba(0,0,0,0.8)';
+      ctx.shadowBlur = 15;
       ctx.fill();
+      
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, radius * 0.14, 0, TAU);
       ctx.shadowBlur = 0;
-      ctx.strokeStyle = '#e9c46a';
-      ctx.lineWidth = 5;
+      ctx.strokeStyle = rimGrad;
+      ctx.lineWidth = 6;
       ctx.stroke();
 
       ctx.beginPath();
       ctx.arc(centerX, centerY, radius * 0.06, 0, TAU);
-      ctx.fillStyle = '#e7b553';
-      ctx.shadowBlur = 10;
-      ctx.shadowColor = '#ffd58c';
+      ctx.fillStyle = '#f1c40f';
       ctx.fill();
-      ctx.shadowBlur = 0;
+    }
+
+    // 缓动函数 (Ease Out Quart)，实现平滑减速
+    function easeOutQuart(t) {
+      return 1 - (--t) * t * t * t;
+    }
+
+    function animateSpin(timestamp) {
+      if (!spinStartTime) spinStartTime = timestamp;
+      const elapsed = timestamp - spinStartTime;
+      let progress = elapsed / SPIN_DURATION;
+
+      if (progress > 1) progress = 1;
+
+      const easeProgress = easeOutQuart(progress);
+      rotation = startRotation + (targetRotation - startRotation) * easeProgress;
+
+      drawWheel();
+
+      if (progress < 1) {
+        requestAnimationFrame(animateSpin);
+      } else {
+        // 旋转动画彻底结束后，显示结果弹窗
+        isAnimating = false;
+        spinBtn.disabled = false;
+        updateBtn.disabled = false;
+        loadingOverlay.classList.remove('active');
+        canvas.style.pointerEvents = '';
+        
+        // 算出真正中奖的 Label (基于目标角度计算)
+        const count = labels.length;
+        const angleStep = TAU / count;
+        // 顶部的角度是 -PI/2 (即 270 度)
+        let finalMod = (( -PI / 2 - rotation ) % TAU + TAU) % TAU; 
+        let winnerIndex = Math.floor(finalMod / angleStep);
+        
+        const winner = labels[winnerIndex];
+        resultDisplay.textContent = winner;
+        showCardAnimation(winner);
+      }
     }
 
     function createParticles() {
@@ -824,6 +886,8 @@
 
     function showCardAnimation(winnerText) {
       cardResult.textContent = winnerText;
+      const randomQuote = encouragementQuotes[Math.floor(Math.random() * encouragementQuotes.length)];
+      cardSubtitle.textContent = randomQuote;
       overlay.classList.add('active');
       createParticles();
     }
@@ -836,32 +900,40 @@
     function startDraw() {
       if (isAnimating) return;
       const count = labels.length;
-      if (count < 2) { alert('至少需要两个学习项目才能抽选'); return; }
+      if (count < 2) { alert('至少需要两个选项才能抽取'); return; }
 
       isAnimating = true;
       spinBtn.disabled = true;
       updateBtn.disabled = true;
       canvas.style.pointerEvents = 'none';
 
+      // 1. 确定中奖索引
       const targetIndex = Math.floor(Math.random() * count);
-      const winner = labels[targetIndex];
+      
+      // 2. 计算物理旋转的目标角度
+      const angleStep = TAU / count;
+      // 指针在正上方(-PI/2)，要求旋转停止时，指针正好落在 targetIndex 的扇形正中间
+      const targetCenterAngle = targetIndex * angleStep + angleStep / 2;
+      // 需要的最终旋转角度 (加上基础旋转圈数，比如多转 6 圈)
+      const extraSpins = 6 * TAU;
+      
+      // 计算所需的准确终点
+      const currentMod = rotation % TAU;
+      let finalNeededRotation = -PI / 2 - targetCenterAngle;
+      
+      targetRotation = rotation - currentMod + extraSpins + finalNeededRotation;
+      
+      // 确保总是向前转动
+      if (targetRotation <= rotation + (4 * TAU)) {
+          targetRotation += TAU;
+      }
 
-      // 显示加载动画
+      startRotation = rotation;
+      spinStartTime = null;
+
+      // 3. 开启猫咪遮罩并开始物理旋转
       loadingOverlay.classList.add('active');
-
-      // 加载2秒后显示结果
-      setTimeout(() => {
-        loadingOverlay.classList.remove('active');
-        
-        setTimeout(() => {
-          showCardAnimation(winner);
-          resultDisplay.textContent = winner;
-          canvas.style.pointerEvents = '';
-          isAnimating = false;
-          spinBtn.disabled = false;
-          updateBtn.disabled = false;
-        }, 300);
-      }, 2000);
+      requestAnimationFrame(animateSpin);
     }
 
     function initialSetup() {
@@ -873,22 +945,17 @@
       drawWheel();
       resultDisplay.textContent = '—';
 
-      updateBtn.addEventListener('click', () => {
-        if (isAnimating) return;
-        updateWheelFromInput();
-        resultDisplay.textContent = '—';
-      });
+      updateBtn.addEventListener('click', updateWheelFromInput);
 
       spinBtn.addEventListener('click', () => {
-        if (isAnimating) return;
-        if (labels.length < 2) { alert('请至少设置两个学习项目'); return; }
+        if (labels.length < 2) { alert('请至少设置两个选项'); return; }
         startDraw();
       });
 
       canvas.addEventListener('click', () => {
         if (isAnimating) return;
         if (labels.length >= 2) { startDraw(); }
-        else { alert('学习项目不足，请添加'); }
+        else { alert('选项不足，请添加'); }
       });
 
       cardClose.addEventListener('click', hideCardAnimation);
@@ -899,16 +966,13 @@
       optionsInput.addEventListener('keydown', (e) => {
         if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
           e.preventDefault();
-          if (!isAnimating) {
-            updateWheelFromInput();
-            resultDisplay.textContent = '—';
-          }
+          updateWheelFromInput();
         }
       });
     }
 
     initialSetup();
-    window.addEventListener('resize', () => { drawWheel(); });
+    window.addEventListener('resize', () => { if (!isAnimating) drawWheel(); });
   })();
 </script>
 </body>
